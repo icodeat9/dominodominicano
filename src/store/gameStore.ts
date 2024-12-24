@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { startGame, getGame, play } from '../services/gameService'
+import { startGame, getGame, play, draw } from '../services/gameService'
 import router from '../router'
 import { useUserStore } from './userStore'
 import consumer from '../cable'
@@ -11,8 +11,9 @@ export const useGameStore = defineStore('game', {
     teamMateHand: null,
     playerHandState: { tiles: [] },
     board: [],
-    gridSize: 75,
+    gridSize: 60,
     center: { x: 0, y: 0 },
+    tileDeck: [],
   }),
   getters: {
     playerHand: (state) => state.currentHand,
@@ -23,18 +24,20 @@ export const useGameStore = defineStore('game', {
         const userStore = useUserStore()
         const game = await getGame(gameId)
         this.currentGame = game
-        this.currentHand = game.rounds[0].player_hands.find(
+        this.currentHand = game.current_round.player_hands.find(
           (playerHand) => playerHand.user_id === userStore.currentUser.id,
         )
-        this.teamMateHand = game.rounds[0].player_hands.find(
+        this.teamMateHand = game.current_round.player_hands.find(
           (playerHand) => playerHand.user_id !== userStore.currentUser.id,
         )
-        game.rounds[0].played_tiles.forEach((tile) => {
+        game.current_round.played_tiles.forEach((tile) => {
           this.removeTileFromHand(tile)
           this.addTileToBoard(tile)
         })
 
-        this.listenToSocketEvents(game.rounds[0].id)
+        this.tileDeck = game.current_round.drawable_tiles
+
+        this.listenToSocketEvents(game.current_round.id)
       } catch (error) {
         console.error('Failed to get game:', error)
       }
@@ -51,6 +54,8 @@ export const useGameStore = defineStore('game', {
                 const orientation = data.played_tiles.length === 0 ? 'horizontal' : 'vertical'
                 return { ...tile, orientation }
               })
+            } else if (data.action === 'drawable_tiles_updated') {
+              this.tileDeck = data.drawable_tiles
             }
           },
         },
@@ -71,6 +76,15 @@ export const useGameStore = defineStore('game', {
         this.removeTileFromHand(tile)
       } catch (error) {
         console.error('Failed to play tile:', error)
+      }
+    },
+    async drawTile(gameId: number, tile: any) {
+      try {
+        await draw(gameId, tile)
+        this.tileDeck = this.tileDeck.filter((t) => t.id !== tile.id)
+        this.currentHand.tiles.push(tile)
+      } catch (error) {
+        console.error('Failed to draw tile:', error)
       }
     },
     addTileToBoard(tile) {

@@ -4,7 +4,7 @@
       class="board flex flex-wrap w-full h-full bg-gray-200 border-4 border-gray-700 rounded-lg p-2"
     ></div>
     <div class="player-hand-container flex justify-center w-full p-4">
-      <PlayerHand />
+      <PlayerHand :tiles="[]" />
     </div>
   </div>
 </template>

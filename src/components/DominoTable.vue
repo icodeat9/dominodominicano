@@ -4,11 +4,11 @@
   >
     <div class="flex justify-between items-center">
       <span class="font-bold text-lg text-gray-800"
-        >{{ table.name }} ({{ table.users.length }}/4)</span
+        >{{ table.name }} ({{ table.users.length }}/2)</span
       >
       <div>
         <button
-          v-if="!isUserInTable && table.users.length < 4"
+          v-if="!isUserInTable && !table.table_full"
           @click="$emit('joinTable', table.id)"
           class="ml-2 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-300"
         >
@@ -22,7 +22,7 @@
           Leave
         </button>
         <button
-          v-if="isUserInTable && table.users.length === 4"
+          v-if="isUserInTable && table.table_full"
           @click="$emit('startGame', table.id)"
           class="ml-2 p-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors duration-300"
         >
@@ -46,9 +46,10 @@
 </template>
 
 <script lang="ts">
+import { defineComponent, computed } from 'vue'
 import { useUserStore } from '../store/userStore'
 
-export default {
+export default defineComponent({
   name: 'DominoTable',
   props: {
     table: {
@@ -59,16 +60,17 @@ export default {
       }),
     },
   },
-  computed: {
-    isUserInTable() {
-      const userStore = useUserStore()
-      const currentUser = userStore.currentUser
-      return this.table.users.some((user) => user.id === currentUser.id)
-    },
-    currentUser() {
-      const userStore = useUserStore()
-      return userStore.currentUser
-    },
+  setup(props) {
+    const userStore = useUserStore()
+    const currentUser = computed(() => userStore.currentUser)
+    const isUserInTable = computed(() =>
+      props.table.users.some((user) => user.id === currentUser.value.id)
+    )
+
+    return {
+      currentUser,
+      isUserInTable,
+    }
   },
-}
+})
 </script>

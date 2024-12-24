@@ -49,7 +49,7 @@ export default defineComponent({
       const offset = this.gridSize + 1 // Adjust the offset as needed
 
       if (index > this.centerIndex) {
-        const limit = 3
+        const limit = 4
 
         if (index > this.centerIndex + limit) {
           // pivot tile
@@ -59,7 +59,7 @@ export default defineComponent({
           )
           return {
             x: pivotPosition.x + offset * (index - this.centerIndex - limit),
-            y: pivotPosition.y - offset / 5,
+            y: pivotPosition.y - offset / 45,
           }
         }
 
@@ -70,17 +70,17 @@ export default defineComponent({
           y: previousPosition.y - offset,
         }
       } else if (index < this.centerIndex) {
-        const limit = 3
+        const limit = 4
 
         if (index < this.centerIndex - limit) {
           // pivot tile
           const pivotPosition = this.getTilePosition(
-            this.board[this.centerIndex - 3],
-            this.centerIndex - 3,
+            this.board[this.centerIndex - limit],
+            this.centerIndex - limit,
           )
           return {
             x: pivotPosition.x - offset * (this.centerIndex - index - limit),
-            y: pivotPosition.y,
+            y: pivotPosition.y + offset / 45,
           }
         }
         const previousPosition = this.getTilePosition(this.board[index + 1], index + 1)

@@ -44,7 +44,7 @@ export default defineComponent({
     },
   },
   setup(props) {
-    const limit = 3
+    const limit = 4
 
     const rotation = computed(() => {
       const isDouble = props.tile.top === props.tile.bottom
@@ -87,4 +87,6 @@ export default defineComponent({
 .tile {
   @apply absolute flex justify-center items-center;
 }
+
+
 </style>

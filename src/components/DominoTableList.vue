@@ -12,9 +12,10 @@
 </template>
 
 <script lang="ts">
+import { defineComponent } from 'vue'
 import DominoTable from './DominoTable.vue'
 
-export default {
+export default defineComponent({
   name: 'DominoTableList',
   components: {
     DominoTable,
@@ -25,5 +26,5 @@ export default {
       required: true,
     },
   },
-}
+})
 </script>

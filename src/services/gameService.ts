@@ -55,3 +55,19 @@ export const play = async (gameId: number, tile: any) => {
     throw new Error('Error playing tile: ' + error.message)
   }
 }
+
+export const draw = async (gameId: number, tile: any) => {
+  try {
+    const response = await fetch(`${API_URL}/games/${gameId}/draw`, {
+      method: 'POST',
+      headers: {
+        ...getJsonHeaders(),
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ tile }),
+    })
+    return await handleResponse(response)
+  } catch (error) {
+    throw new Error('Error drawing tile: ' + error.message)
+  }
+}

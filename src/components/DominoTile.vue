@@ -25,7 +25,10 @@
 </template>
 
 <script lang="ts">
-export default {
+import { defineComponent, computed } from 'vue'
+
+export default defineComponent({
+  name: 'DominoTile',
   props: {
     top: {
       type: Number,
@@ -36,15 +39,16 @@ export default {
       required: true,
     },
   },
-  computed: {
-    topDots() {
-      return Array(this.top).fill(0)
-    },
-    bottomDots() {
-      return Array(this.bottom).fill(0)
-    },
+  setup(props) {
+    const topDots = computed(() => Array(props.top).fill(0))
+    const bottomDots = computed(() => Array(props.bottom).fill(0))
+
+    return {
+      topDots,
+      bottomDots,
+    }
   },
-}
+})
 </script>
 
 <style scoped>

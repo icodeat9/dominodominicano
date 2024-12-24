@@ -1,15 +1,18 @@
 <template>
   <div class="game-table relative h-screen bg-cover bg-center">
+    <TileDeck @tile-click="drawTile" :tiles="tileDeck" class="tile-deck absolute left-10 top-1/2 transform -translate-y-1/2 z-10" />
     <BoardComponent :board="board" :gridSize="gridSize" :center="center" />
     <PlayerHand
       v-if="teamMateHand"
       :tiles="teamMateHand.tiles"
+      :isOwner="false"
       class="team-mate-hand absolute top-10 w-full"
       @tile-click="attemptPlaceTile"
     />
     <PlayerHand
       v-if="playerHand"
       :tiles="playerHand.tiles"
+      :isOwner="true"
       class="player-hand absolute bottom-10 w-full"
       @tile-click="attemptPlaceTile"
     />
@@ -21,12 +24,14 @@ import { defineComponent } from 'vue'
 import { useGameStore } from '@/store/gameStore'
 import PlayerHand from '@/components/PlayerHand.vue'
 import BoardComponent from '@/components/BoardComponent.vue'
+import TileDeck from '@/components/TileDeck.vue'
 
 export default defineComponent({
   name: 'GameTable',
   components: {
     PlayerHand,
     BoardComponent,
+    TileDeck,
   },
   data() {
     return {
@@ -49,6 +54,9 @@ export default defineComponent({
     center() {
       return useGameStore().center
     },
+    tileDeck() {
+      return useGameStore().tileDeck
+    },
   },
   methods: {
     async fetchGame() {
@@ -65,6 +73,14 @@ export default defineComponent({
         await gameStore.playTile(Number(this.$route.params.gameId), tile)
       } catch (error) {
         console.error('Failed to play tile:', error)
+      }
+    },
+    async drawTile(tile) {
+      const gameStore = useGameStore()
+      try {
+        await gameStore.drawTile(Number(this.$route.params.gameId), tile)
+      } catch (error) {
+        console.error('Failed to draw tile:', error)
       }
     },
     isValidMove(tile) {
@@ -97,6 +113,9 @@ export default defineComponent({
 }
 .team-mate-hand {
   @apply absolute top-10 w-full;
+}
+.tile-deck {
+  @apply absolute left-10 top-1/2 transform -translate-y-1/2 z-10;
 }
 .center-area {
   position: absolute;
