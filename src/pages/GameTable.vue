@@ -1,18 +1,25 @@
 <template>
   <div class="game-table relative h-screen bg-cover bg-center">
-    <TileDeck @tile-click="drawTile" :tiles="tileDeck" class="tile-deck absolute left-10 top-1/2 transform -translate-y-1/2 z-10" />
-    <BoardComponent :board="board" :gridSize="gridSize" :center="center" />
+    <TileDeck
+      @tile-click="drawTile"
+      :tiles="tileDeck"
+      class="tile-deck absolute left-10 top-1/2 transform -translate-y-1/2 z-10"
+    />
+    <BoardComponent
+      :board="board"
+      :gridSize="gridSize"
+      :center="center"
+      @tile-selected="playTileToBoard"
+    />
     <PlayerHand
       v-if="teamMateHand"
-      :tiles="teamMateHand.tiles"
-      :isOwner="false"
+      :owner="teamMateHand"
       class="team-mate-hand absolute top-10 w-full"
       @tile-click="attemptPlaceTile"
     />
     <PlayerHand
       v-if="playerHand"
-      :tiles="playerHand.tiles"
-      :isOwner="true"
+      :owner="playerHand"
       class="player-hand absolute bottom-10 w-full"
       @tile-click="attemptPlaceTile"
     />
@@ -20,7 +27,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, ref, provide, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useGameStore } from '@/store/gameStore'
 import PlayerHand from '@/components/PlayerHand.vue'
 import BoardComponent from '@/components/BoardComponent.vue'
@@ -33,69 +41,132 @@ export default defineComponent({
     BoardComponent,
     TileDeck,
   },
-  data() {
-    return {
-      openEnds: [],
+  setup() {
+    const route = useRoute()
+    const gameStore = useGameStore()
+    const decisionModeOn = ref(false)
+    const playerTileSelected = ref(null)
+
+    provide('decisionModeOn', decisionModeOn)
+    provide('playerTileSelected', playerTileSelected)
+
+    const playerHand = computed(() => gameStore.playerHand)
+    const teamMateHand = computed(() => gameStore.teamMateHand)
+    const board = computed(() => gameStore.board)
+    const gridSize = computed(() => gameStore.gridSize)
+    const center = computed(() => gameStore.center)
+    const tileDeck = computed(() => gameStore.tileDeck)
+
+    const fetchGame = async () => {
+      await gameStore.get(Number(route.params.gameId))
     }
-  },
-  computed: {
-    playerHand() {
-      return useGameStore().playerHand
-    },
-    teamMateHand() {
-      return useGameStore().teamMateHand
-    },
-    board() {
-      return useGameStore().board
-    },
-    gridSize() {
-      return useGameStore().gridSize
-    },
-    center() {
-      return useGameStore().center
-    },
-    tileDeck() {
-      return useGameStore().tileDeck
-    },
-  },
-  methods: {
-    async fetchGame() {
-      await useGameStore().get(Number(this.$route.params.gameId))
-    },
-    attemptPlaceTile(tile) {
-      if (this.isValidMove(tile)) {
-        this.placeTile(tile)
+
+    const playTileToBoard = (boardTile) => {
+      if (isValidMove(playerTileSelected.value)) {
+        placeTile(playerTileSelected.value, boardTile)
+        decisionModeOn.value = false
+        playerTileSelected.value = null
       }
-    },
-    async placeTile(tile) {
-      const gameStore = useGameStore()
+    }
+
+    const attemptPlaceTile = (tile) => {
+      if (tileCanBePlacedAtBothEnds(tile)) {
+        decisionModeOn.value = true
+        playerTileSelected.value = tile
+        return
+      }
+
+      if (isValidMove(tile)) {
+        decisionModeOn.value = false
+        playerTileSelected.value = null
+        return placeTile(tile)
+      }
+    }
+
+    const placeTile = async (tile, boardTile) => {
       try {
-        await gameStore.playTile(Number(this.$route.params.gameId), tile)
+        await gameStore.playTile(Number(route.params.gameId), tile, boardTile)
       } catch (error) {
         console.error('Failed to play tile:', error)
       }
-    },
-    async drawTile(tile) {
-      const gameStore = useGameStore()
+    }
+
+    const drawTile = async (tile) => {
       try {
-        await gameStore.drawTile(Number(this.$route.params.gameId), tile)
+        await gameStore.drawTile(Number(route.params.gameId), tile)
       } catch (error) {
         console.error('Failed to draw tile:', error)
       }
-    },
-    isValidMove(tile) {
-      return (
-        this.openEnds.length === 0 ||
-        this.openEnds.some((end) => tile.top === end || tile.bottom === end)
-      )
-    },
-    updateOpenEnds(tile) {
-      this.openEnds = this.openEnds.filter((end) => end !== tile.top && end !== tile.bottom)
-      this.openEnds.push(tile.top, tile.bottom)
-    },
-  },
-  async mounted() {
-    await this.fetchGame()
+    }
+
+    const getCoreTile = (board) => {
+      return board.value.find((tile) => {
+        if (tile.core == true) {
+          return tile
+        }
+      })
+    }
+
+    const isValidMove = (tile) => {
+      if (board.value.length === 0) return true
+      const core = getCoreTile(board)
+
+      if (core.type == 'double') {
+        return (
+          board.value[0].top == tile.top ||
+          board.value[0].top == tile.bottom ||
+          board.value[board.value.length - 1].top == tile.bottom ||
+          board.value[board.value.length - 1].top == tile.top
+        )
+      } else {
+        return (
+          board.value[0].top == tile.top ||
+          board.value[0].top == tile.bottom ||
+          board.value[board.value.length - 1].bottom == tile.bottom ||
+          board.value[board.value.length - 1].bottom == tile.top
+        )
+      }
+    }
+
+    const tileCanBePlacedAtBothEnds = (tile) => {
+      if (board.value.length === 0 || board.value.length === 1) return false
+
+      const core = getCoreTile(board)
+      if (core.type == 'double') {
+        return (
+          (board.value[0].top == tile.top || board.value[0].top == tile.bottom) &&
+          (board.value[board.value.length - 1].top == tile.bottom ||
+            board.value[board.value.length - 1].top == tile.top)
+        )
+      } else {
+        return (
+          (board.value[0].top == tile.top || board.value[0].top == tile.bottom) &&
+          (board.value[board.value.length - 1].bottom == tile.bottom ||
+            board.value[board.value.length - 1].bottom == tile.top)
+        )
+      }
+    }
+
+    onMounted(async () => {
+      await fetchGame()
+    })
+
+    return {
+      decisionModeOn,
+      playerTileSelected,
+      playerHand,
+      teamMateHand,
+      board,
+      gridSize,
+      center,
+      tileDeck,
+      playTileToBoard,
+      attemptPlaceTile,
+      placeTile,
+      drawTile,
+      isValidMove,
+      tileCanBePlacedAtBothEnds,
+    }
   },
 })
 </script>

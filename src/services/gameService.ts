@@ -40,7 +40,7 @@ export const getGame = async (gameId: number) => {
   }
 }
 
-export const play = async (gameId: number, tile: any) => {
+export const play = async (gameId: number, tile: any, boardTile: any) => {
   try {
     const response = await fetch(`${API_URL}/games/${gameId}/play`, {
       method: 'POST',
@@ -48,7 +48,7 @@ export const play = async (gameId: number, tile: any) => {
         ...getJsonHeaders(),
         ...getAuthHeaders(),
       },
-      body: JSON.stringify({ tile }),
+      body: JSON.stringify({ tile, boardTile }),
     })
     return await handleResponse(response)
   } catch (error) {
