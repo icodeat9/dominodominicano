@@ -11,7 +11,8 @@ export const useGameStore = defineStore('game', {
     teamMateHand: null,
     currentPlayerAtTurn: null,
     board: [],
-    gridSize: 60,
+    widthGridSize: 100,
+    heightGridSize: 75,
     center: { x: 0, y: 0 },
     tileDeck: [],
   }),
@@ -55,7 +56,6 @@ export const useGameStore = defineStore('game', {
     handleSocketEvent(data) {
       if (data.action === 'play') {
         this.currentPlayerAtTurn = data.current_player_at_turn
-        debugger
         this.removeTileFromHand(data.tile)
       } else if (data.action === 'played_tiles_updated') {
         this.updatePlayedTiles(data.played_tiles)
@@ -103,7 +103,7 @@ export const useGameStore = defineStore('game', {
     },
     calculateNewPosition(lastTile, tile) {
       return lastTile
-        ? { x: lastTile.position.x, y: lastTile.position.y - this.gridSize }
+        ? { x: lastTile.position.x, y: lastTile.position.y - this.widthGridSize }
         : { x: this.center.x, y: this.center.y }
     },
     removeTileFromHand(tile) {
