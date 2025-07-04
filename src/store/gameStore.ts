@@ -40,8 +40,11 @@ export const useGameStore = defineStore('game', {
       )
       game.current_round.played_tiles.forEach((tile) => {
         this.removeTileFromHand(tile)
-        this.addTileToBoard(tile)
       })
+
+      this.board = game.current_round.played_tiles
+
+      this.calculateTilesPosition()
       this.currentPlayerAtTurn = game.current_round.current_player_at_turn
       this.tileDeck = game.current_round.drawable_tiles
     },
@@ -65,6 +68,7 @@ export const useGameStore = defineStore('game', {
     },
     updatePlayedTiles(playedTiles) {
       this.board = playedTiles
+      this.calculateTilesPosition()
     },
     async start(tableId: number) {
       try {
@@ -95,16 +99,90 @@ export const useGameStore = defineStore('game', {
     updateTileDeck(tile) {
       this.tileDeck = this.tileDeck.filter((t) => t.id !== tile.id)
     },
-    addTileToBoard(tile) {
-      const lastTile = this.board.length > 0 ? this.board[this.board.length - 1] : null
-      const newPosition = this.calculateNewPosition(lastTile, tile)
-      const orientation = this.board.length === 0 ? 'horizontal' : 'vertical'
-      this.board.push({ ...tile, position: newPosition, orientation })
-    },
-    calculateNewPosition(lastTile, tile) {
-      return lastTile
-        ? { x: lastTile.position.x, y: lastTile.position.y - this.widthGridSize }
-        : { x: this.center.x, y: this.center.y }
+    calculateTilesPosition() {
+      const offset = this.widthGridSize + 5
+      const limit = 4
+      const otherLimit = 3
+      const centerIndex = this.board.findIndex((tile) => tile.core === true)
+
+      const getTilePosition = (tile, index) => {
+        if (tile.core) {
+          return {
+            x: this.center.x - this.widthGridSize / 2,
+            y: this.center.y - this.heightGridSize,
+          }
+        }
+
+        if (index > centerIndex) {
+          return getTilePositionAfterCenter(tile, index)
+        } else if (index < centerIndex) {
+          return getTilePositionBeforeCenter(tile, index)
+        }
+      }
+
+      const getTilePositionAfterCenter = (tile, index) => {
+        const getPreviousPosition = (idx) => getTilePosition(this.board[idx], idx)
+        const getPivotPosition = (idx) => getTilePosition(this.board[idx], idx)
+
+        if (index === centerIndex + limit) {
+          const previousPosition = getPreviousPosition(index - 1)
+          return tile.type === 'double'
+            ? { x: previousPosition.x, y: previousPosition.y + offset }
+            : { x: previousPosition.x + 25, y: previousPosition.y + offset - 25 }
+        }
+        if (index > centerIndex + limit) {
+          const pivotPosition = getPivotPosition(centerIndex + limit)
+          return tile.type === 'double'
+            ? {
+                x: pivotPosition.x + offset * (index - centerIndex - limit),
+                y: pivotPosition.y - offset + 105,
+              }
+            : {
+                x: pivotPosition.x + offset * (index - centerIndex - limit),
+                y: pivotPosition.y - offset + 105,
+              }
+        }
+        const previousPosition = getPreviousPosition(index - 1)
+        return this.board[index - 1].type === 'double'
+          ? { x: previousPosition.x, y: previousPosition.y + offset - 25 }
+          : { x: previousPosition.x, y: previousPosition.y + offset }
+      }
+
+      const getTilePositionBeforeCenter = (tile, index) => {
+        const getPreviousPosition = (idx) => getTilePosition(this.board[idx], idx)
+        const getPivotPosition = (idx) => getTilePosition(this.board[idx], idx)
+
+        if (index === centerIndex - limit) {
+          const previousPosition = getPreviousPosition(index + 1)
+          return tile.type === 'double'
+            ? { x: previousPosition.x, y: previousPosition.y - offset + 25 }
+            : { x: previousPosition.x, y: previousPosition.y - offset }
+        }
+        if (index < centerIndex - limit) {
+          if (index < centerIndex - limit - limit) {
+            const pivotPosition = getPivotPosition(centerIndex - limit - limit)
+            return {
+              x: pivotPosition.x * (centerIndex - index - limit - limit),
+              y: pivotPosition.y + offset,
+            }
+          }
+          const pivotPosition = getPivotPosition(centerIndex - limit)
+          return {
+            x: pivotPosition.x - offset * (centerIndex - index - limit),
+            y: pivotPosition.y + offset - 101,
+          }
+        }
+        const previousPosition = getPreviousPosition(index + 1)
+        return this.board[index + 1].type === 'double'
+          ? { x: previousPosition.x, y: previousPosition.y - offset + 25 }
+          : { x: previousPosition.x, y: previousPosition.y - offset }
+      }
+
+      this.board = this.board.map((tile, index) => {
+        const position = getTilePosition(tile, index)
+        const orientation = index % 2 === 0 ? 'horizontal' : 'vertical'
+        return { ...tile, position, orientation }
+      })
     },
     removeTileFromHand(tile) {
       if (this.currentHand) {

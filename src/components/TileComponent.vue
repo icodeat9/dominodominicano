@@ -1,5 +1,5 @@
 <template>
-  <div class="tile-component" :style="positionStyle" @click="onTileClick">
+  <div class="tile-component" :style="tileStyle" @click="onTileClick">
     <img :src="createTileCanvas(tile)" :class="{ highlight: highlight }" />
   </div>
 </template>
@@ -26,33 +26,30 @@ export default defineComponent({
       type: Object,
       required: true,
     },
-    position: {
-      type: Object,
+    centerIndex: {
+      type: Number,
       required: true,
     },
     index: {
       type: Number,
       required: true,
     },
-    centerIndex: {
-      type: Number,
+    coreTile: {
+      type: Object,
       required: true,
     },
     highlight: {
       type: Boolean,
       required: true,
     },
-    coreTile: {
-      type: Object,
-      required: true,
-    },
   },
   emits: ['click'],
   setup(props, { emit }) {
-    const limit = 3
     const decisionModeOn = inject('decisionModeOn')
 
     const rotation = computed(() => {
+      const limit = 4
+      const otherLimit = 3
       if (props.coreTile.type == 'single') {
         const isDouble = props.tile.top === props.tile.bottom
         const isCore = props.tile.core
@@ -96,9 +93,12 @@ export default defineComponent({
 
         if (props.index < props.centerIndex) {
           if (props.index == props.centerIndex - limit) {
-            return isDouble ? '0deg' : props.tile.flipped ? '180deg' : '-90deg'
+            return isDouble ? '0deg' : props.tile.flipped ? '180deg' : '90deg'
           }
           if (props.index < props.centerIndex - limit) {
+            if (props.index < props.centerIndex - limit - otherLimit) {
+              return isDouble ? '90deg' : props.tile.flipped ? '-90deg' : '-90deg'
+            }
             return isDouble ? '90deg' : props.tile.flipped ? '0deg' : '0deg'
           }
 
@@ -108,15 +108,6 @@ export default defineComponent({
         return isDouble ? '0deg' : '90deg'
       }
     })
-
-    const scaleY = computed(() => {
-      return props.tile.flipped ? -1 : 1
-    })
-
-    const positionStyle = {
-      transform: `translate(${props.position.x}px, ${props.position.y}px) rotate(${rotation.value}) scaleY(${scaleY.value})`,
-      margin: '-5px',
-    }
 
     const onTileClick = () => {
       emit('click', props.tile)
@@ -190,13 +181,17 @@ export default defineComponent({
       return canvas.toDataURL()
     }
 
+    const tileStyle = computed(() => {
+      return {
+        transform: `translate(${props.tile.position.x}px, ${props.tile.position.y}px) rotate(${rotation.value})`,
+      }
+    })
+
     return {
-      rotation,
-      scaleY,
       decisionModeOn,
-      positionStyle,
       onTileClick,
       createTileCanvas,
+      tileStyle,
     }
   },
 })
@@ -204,8 +199,8 @@ export default defineComponent({
 
 <style scoped>
 .tile-component {
-  position: absolute;
   cursor: pointer;
+  position: absolute;
 }
 .highlight {
   @apply border-4 border-blue-500 rounded-lg shadow-lg;
